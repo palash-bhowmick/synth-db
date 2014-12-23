@@ -36,6 +36,8 @@
 ;; entity is a navigable view over data
 (def ent (d/entity db q-result))
 
+(:db/doc ent)
+
 ;; entities are lazy, so...
 (d/touch ent)
 
