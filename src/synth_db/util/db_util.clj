@@ -1,13 +1,17 @@
 (ns
   ^{:author Tanmoy}
-  syth-db.util.db-util
+  synth-db.util.db-util
   (:require [clojure.java.jdbc :as jdbc])
   )
 
-(def driver-classes {"derby" "org.apache.derby.jdbc.ClientDriver"})
+(def driver-classes {:derby "org.apache.derby.jdbc.ClientDriver"})
 
 (def data-type {"VARCHAR" :db.type/string
-                "NUMERIC" :db.type/bigdec})
+                "NUMERIC" :db.type/bigdec
+                "VARCHAR2" :db.type/string
+                "NUMBER" :db.type/bigdec
+                "DECIMAL" :db.type/bigdec
+                "INTEGER" :db.type/bigdec})
 
 (defn get-table-meta-data
   [db-spec catalog schema-name table-name]
@@ -28,22 +32,23 @@
     )
   mylist
   )
+(defn get-db-spec [opts]
+  (merge {:classname ((:dbtype opts) driver-classes)
+          :subprotocol (name (:dbtype opts))
+          :subname (str "//" (:host opts) ":" (:port opts) "/" (:db opts) ";ssl=basic")
+          :ssl "basic"
+          :make-pool? true
+          } opts)
+  )
+
 (defn get-columns
   [{:keys [host port db dbtype catalog schema-name table-name ssl?]
     :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
     :as opts}]
 
-  (if (== (.length table-name) 0)
-    (throw (IllegalArgumentException. "Table Name Not Specified ....."))
-    )
+  (if (empty? table-name) (throw (IllegalArgumentException. "Table Name Not Specified.")))
 
-  (let [db-spec (merge {:classname (get-in driver-classes [dbtype])
-                        :subprotocol dbtype
-                        :subname (str "//" host ":" port "/" db ";ssl=basic")
-                        :ssl "basic"
-                        :make-pool? true
-                        } opts)
-
+  (let [db-spec (get-db-spec opts)
         table-meta-data (get-table-meta-data db-spec catalog schema-name table-name)
         table-name-lc (.toLowerCase table-name)
         column-list (get-column-vector table-meta-data table-name-lc)
@@ -57,21 +62,12 @@
     :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
     :as opts}]
 
-  (if (== (.length table-name) 0)
-    (throw (IllegalArgumentException. "Table Name Not Specified ....."))
-    )
+  (if (empty? table-name) (throw (IllegalArgumentException. "Table Name Not Specified.")))
 
-  (let [db-spec
-        (merge {:classname (get-in driver-classes [dbtype])
-                :subprotocol dbtype
-                :subname (str "//" host ":" port "/" db ";ssl=basic")
-                :ssl "basic"
-                :make-pool? true
-                } opts)
+  (let [db-spec (get-db-spec opts)
         query (if (> (.length schema-name) 0)
                 (str "SELECT * FROM " schema-name "." table-name) (str "SELECT * FROM " table-name))
-        qs (jdbc/query db-spec [query]
-             )]
+        qs (jdbc/query db-spec [query])]
     qs
     )
   )
