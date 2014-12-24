@@ -25,7 +25,7 @@
   (while (.next table-meta-data)
     (def mylist (conj mylist
                   {:db/valueType (get-in data-type [(.getString table-meta-data 6)])
-                   :db/ident (str ":" table-name-lc "/" (.toLowerCase (.getString table-meta-data 4)))
+                   :db/ident (str ":table." table-name-lc "/" (.replaceAll (.toLowerCase (.getString table-meta-data 4)) " " "_"))
                    }
                   )
       )

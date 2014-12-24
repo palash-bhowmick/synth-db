@@ -27,7 +27,7 @@
 
 ;;; DATOMIC RELATED
 
-(def datomic-uri "datomic:free://192.168.33.161:4334/test101")
+(def datomic-uri "datomic:free://192.168.33.161:4334/test102")
 
 (def datomic-condata (create-connection datomic-uri))
 
@@ -37,7 +37,7 @@
 (defn get-datomic-map [value table-name tempid]
   (if (first (rest value))
     (get-insert-value-map
-      {(str ":" table-name "/" (.substring (str (first value)) 1)) (first (rest value))}
+      {(str ":table." table-name "/" (.replaceAll (.substring (str (first value)) 1) " " "_")) (first (rest value))}
       tempid
       )
     {}
