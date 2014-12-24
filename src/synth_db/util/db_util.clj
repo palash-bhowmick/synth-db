@@ -32,7 +32,9 @@
     )
   mylist
   )
-(defn get-db-spec [opts]
+(defn get-db-spec [{:keys [host port db dbtype catalog schema-name table-name ssl?]
+                    :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
+                    :as opts}]
   (merge {:classname ((:dbtype opts) driver-classes)
           :subprotocol (name (:dbtype opts))
           :subname (str "//" (:host opts) ":" (:port opts) "/" (:db opts) ";ssl=basic")
@@ -60,14 +62,14 @@
   )
 
 (defn get-columns
-  [{:keys [host port db dbtype catalog schema-name table-name ssl?]
-    :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
-    :as opts}]
+  [opts]
+  (if (empty? (:table-name opts)) (throw (IllegalArgumentException. "Table Name Not Specified.")))
 
-  (if (empty? table-name) (throw (IllegalArgumentException. "Table Name Not Specified.")))
-
-  (let [db-spec (get-db-spec opts)
-        table-meta-data (get-table-meta-data db-spec catalog schema-name table-name)
+  (let [opts (get-db-spec opts)
+        table-name (:table-name opts)
+        schema-name (:schema-name opts)
+        catalog (:catalog opts)
+        table-meta-data (get-table-meta-data opts catalog schema-name table-name)
         table-name-lc (.toLowerCase table-name)
         column-list (get-column-vector table-meta-data table-name-lc)
         ]
@@ -76,16 +78,12 @@
   )
 
 (defn get-data
-  [{:keys [host port db dbtype catalog schema-name table-name ssl?]
-    :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
-    :as opts}]
-
-  (if (empty? table-name) (throw (IllegalArgumentException. "Table Name Not Specified.")))
-
-  (let [db-spec (get-db-spec opts)
+  [opts]
+  (if (empty? (:table-name opts)) (throw (IllegalArgumentException. "Table Name Not Specified.")))
+  (let [opts (get-db-spec opts)
+        table-name (:table-name opts)
+        schema-name (:schema-name opts)
         query (if (> (.length schema-name) 0)
                 (str "SELECT * FROM " schema-name "." table-name) (str "SELECT * FROM " table-name))
-        qs (jdbc/query db-spec [query])]
-    qs
-    )
-  )
+        qs (jdbc/query opts [query])]
+    qs))
