@@ -41,6 +41,24 @@
           } opts)
   )
 
+(defn get-tables
+  [{:keys [host port db dbtype catalog schema-name table-name ssl?]
+    :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
+    :as opts}]
+  (def mylist [])
+  (let [db-spec (get-db-spec opts)
+        table-meta-data (get-table-meta-data db-spec "" schema-name "%")
+        ]
+    (while (.next table-meta-data)
+      (def mylist (conj mylist
+                    (.getString table-meta-data 3)
+                    )
+        )
+      )
+    )
+  (into #{} mylist)
+  )
+
 (defn get-columns
   [{:keys [host port db dbtype catalog schema-name table-name ssl?]
     :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl

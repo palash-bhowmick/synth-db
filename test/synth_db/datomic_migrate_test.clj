@@ -3,9 +3,10 @@
         synth-db.util.db-util)
   )
 
-(def table-name-value "SUPPLIER_DETAILS")
+(def table-name-value "CUSTOMER")
+;; Derby Related Code
 (def db-info {:dbtype :derby
-              :host "localhost"
+              :host "192.168.33.130"
               :port "1530"
               :db "CRM"
               :user "CRM"
@@ -15,16 +16,23 @@
 
 (def cols (get-columns db-info))
 
+;;get columns
 (def cols (into [] (map #(get-attr-map %1) cols)))
 
-(def conn-string "datomic:free://192.168.33.161:4334/test3")
+;;get table names
+(def tables (get-tables db-info))
 
-(def con-data (create-connection conn-string))
+;;get table data
+(def table-data (get-data db-info))
+
+;;; DATOMIC RELATED
+
+(def datomic-uri "datomic:free://192.168.33.161:4334/test101")
+
+(def datomic-condata (create-connection datomic-uri))
 
 ;; create attributes
-(d-transact (:connection con-data) cols)
-
-(def table-data (get-data db-info))
+(d-transact (:connection datomic-condata) cols)
 
 (defn get-datomic-map [value table-name tempid]
   (if (first (rest value))
@@ -47,4 +55,6 @@
 (println (str "Data-Map" data-map))
 
 (println "transacting datamap...")
-(d-transact (:connection con-data) data-map)
+(d-transact (:connection datomic-condata) data-map)
+
+(println "Migration Completed")
