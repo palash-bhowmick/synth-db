@@ -32,6 +32,15 @@
     )
   mylist
   )
+
+(defn get-formatted-name [table-name]
+  (clojure.string/lower-case
+    (clojure.string/replace
+      (clojure.string/trim
+        (clojure.string/replace table-name #"([a-z])([A-Z])" "$1 $2")) #"\s|_+" "-")
+    )
+  )
+
 (defn get-db-spec [{:keys [host port db dbtype catalog schema-name table-name ssl?]
                     :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
                     :as opts}]
