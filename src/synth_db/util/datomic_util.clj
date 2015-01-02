@@ -1,7 +1,8 @@
 (ns
   ^{:author Tanmoy}
   synth-db.util.datomic-util
-  (:require [datomic.api :as d])
+  (:require [datomic.api :as d]
+            [synth-db.util.enlibra-util :as enlibra])
   )
 
 (defn create-connection
@@ -27,6 +28,16 @@
 (defn get-insert-value-map [attr-map tempid]
   (merge {:db/id tempid}
     attr-map
+    )
+  )
+
+(defn get-datomic-map [value table-name tempid]
+  (if (first (rest value))
+    (get-insert-value-map
+      {(str ":table." (enlibra/get-formatted-name table-name) "/" (enlibra/get-formatted-name (name (first value)))) (first (rest value))}
+      tempid
+      )
+    {}
     )
   )
 

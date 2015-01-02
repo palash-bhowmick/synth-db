@@ -1,7 +1,8 @@
 (ns
   ^{:author Tanmoy}
   synth-db.util.db-util
-  (:require [clojure.java.jdbc :as jdbc])
+  (:require [clojure.java.jdbc :as jdbc]
+            [synth-db.util.enlibra-util :as enlibra])
   )
 
 (def driver-classes {:derby "org.apache.derby.jdbc.ClientDriver"})
@@ -25,7 +26,7 @@
   (while (.next table-meta-data)
     (def mylist (conj mylist
                   {:db/valueType (get-in data-type [(.getString table-meta-data 6)])
-                   :db/ident (str ":table." table-name-lc "/" (.replaceAll (.toLowerCase (.getString table-meta-data 4)) " " "_"))
+                   :db/ident (str ":table." table-name-lc "/" (enlibra/get-formatted-name (.getString table-meta-data 4)))
                    }
                   )
       )
@@ -33,13 +34,6 @@
   mylist
   )
 
-(defn get-formatted-name [table-name]
-  (clojure.string/lower-case
-    (clojure.string/replace
-      (clojure.string/trim
-        (clojure.string/replace table-name #"([a-z])([A-Z])" "$1 $2")) #"\s|_+" "-")
-    )
-  )
 
 (defn get-db-spec [{:keys [host port db dbtype catalog schema-name table-name ssl?]
                     :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
@@ -79,7 +73,7 @@
         schema-name (:schema-name opts)
         catalog (:catalog opts)
         table-meta-data (get-table-meta-data opts catalog schema-name table-name)
-        table-name-lc (.toLowerCase table-name)
+        table-name-lc (enlibra/get-formatted-name table-name)
         column-list (get-column-vector table-meta-data table-name-lc)
         ]
     column-list
@@ -93,6 +87,6 @@
         table-name (:table-name opts)
         schema-name (:schema-name opts)
         query (if (> (.length schema-name) 0)
-                (str "SELECT * FROM " schema-name "." table-name) (str "SELECT * FROM " table-name))
-        qs (jdbc/query opts [query])]
+                (str "SELECT * FROM \"" schema-name "\".\"" table-name "\"") (str "SELECT * FROM \"" table-name "\""))
+        qs (jdbc/query opts [query] :identifiers synth-db.util.enlibra-util/get-formatted-name)]
     qs))
