@@ -14,27 +14,6 @@
                 "DECIMAL" :db.type/bigdec
                 "INTEGER" :db.type/bigdec})
 
-(defn get-table-meta-data
-  [db-spec catalog schema-name table-name]
-  (let [conn (jdbc/get-connection db-spec)
-        rs (.getColumns (.getMetaData conn) catalog schema-name table-name "%")]
-    rs))
-
-(defn get-column-vector
-  [table-meta-data table-name-lc]
-  (def mylist [])
-  (while (.next table-meta-data)
-    (def mylist (conj mylist
-                  {:db/valueType (get-in data-type [(.getString table-meta-data 6)])
-                   :db/ident (str ":table." table-name-lc "/" (enlibra/get-formatted-name (.getString table-meta-data 4)))
-                   }
-                  )
-      )
-    )
-  mylist
-  )
-
-
 (defn get-db-spec [{:keys [host port db dbtype catalog schema-name table-name ssl?]
                     :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
                     :as opts}]
@@ -46,39 +25,82 @@
           } opts)
   )
 
-(defn get-tables
-  [{:keys [host port db dbtype catalog schema-name table-name ssl?]
-    :or {host "localhost", port 1527, db "", dbtype "", catalog "", schema-name "", table-name "", ssl? true} ;todo: ssl
-    :as opts}]
-  (def mylist [])
-  (let [db-spec (get-db-spec opts)
-        table-meta-data (get-table-meta-data db-spec "" schema-name "%")
+(defn get-primary-keys
+  [opts]
+  (if (empty? (:table-name opts)) (throw (IllegalArgumentException. "Table Name Not Specified.")))
+  (let [opts (get-db-spec opts)
+        conn (jdbc/get-connection opts)
+        catalog (:catalog opts)
+        schema-name (:schema-name opts)
+        table-name (:table-name opts)
         ]
-    (while (.next table-meta-data)
-      (def mylist (conj mylist
-                    (.getString table-meta-data 3)
-                    )
-        )
-      )
-    )
-  (into #{} mylist)
+    (into-array
+      (map #(str (% :column_name))
+        (resultset-seq (->
+                         conn
+                         (.getMetaData)
+                         (.getPrimaryKeys catalog schema-name table-name)
+                         )
+          )))
+    ))
+
+(defn get-tables
+  [opts]
+  (let [opts (get-db-spec opts)
+        connection (jdbc/get-connection opts)
+        schema-name (:schema-name opts)
+        catalog (:catalog opts)
+        ]
+    (into #{}
+      (map #(str (% :table_name))
+        (resultset-seq (->
+                         connection
+                         (.getMetaData)
+                         ; Params are catalog, schemapattern, tablenamepattern, Array of String
+                         (.getTables catalog schema-name "%" (into-array ["TABLE"]))
+                         )
+          )))
+    ))
+
+(defn get-relevant-pk
+  [primary-keys]
+  ;RETURNS the key only if it is simple primary key
+  (if (= (alength primary-keys) 1)
+    (str (first primary-keys))
+    ""))
+
+(defn get-column-map [type-name column-name table-name-lc primary-key]
+  (let [map-ele {:db/valueType (get-in data-type [type-name])
+                 :db/ident (str ":table." table-name-lc "/" (enlibra/get-formatted-name column-name))}]
+    (if (= column-name primary-key)
+      (merge {:db/unique :db.unique/value} map-ele)
+      map-ele))
   )
 
 (defn get-columns
   [opts]
   (if (empty? (:table-name opts)) (throw (IllegalArgumentException. "Table Name Not Specified.")))
-
+  ;Returns a Vector of map elements in accordance with datomic, for new field attributes along with unique - keyword
+  ;  associated with single primary key attribute
   (let [opts (get-db-spec opts)
         table-name (:table-name opts)
         schema-name (:schema-name opts)
         catalog (:catalog opts)
-        table-meta-data (get-table-meta-data opts catalog schema-name table-name)
+        connection (jdbc/get-connection opts)
         table-name-lc (enlibra/get-formatted-name table-name)
-        column-list (get-column-vector table-meta-data table-name-lc)
+        primary-keys (get-primary-keys opts)
+        primary-key (get-relevant-pk primary-keys)
         ]
-    column-list
-    )
-  )
+    (into []
+      (map #(get-column-map (% :type_name) (% :column_name) table-name-lc primary-key)
+        (resultset-seq (->
+                         connection
+                         (.getMetaData)
+                         ; Params are catalog, schemapattern, tablenamepattern, columnnamepattern
+                         (.getColumns catalog schema-name table-name "%")
+                         )
+          )))
+    ))
 
 (defn get-data
   [opts]
