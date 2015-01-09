@@ -5,6 +5,10 @@
             [synth-db.util.enlibra-util :as enlibra])
   )
 
+(def connection-url nil)
+(def conn nil)
+(def db nil)
+
 (defn create-connection
   [connection-url]
   (d/create-database connection-url)
@@ -15,6 +19,24 @@
      :db dbcon})
   )
 
+(defn init
+  [& datomic-uri]
+  (if (= connection-url nil)
+    (if (= datomic-uri nil) (throw (IllegalArgumentException. "Specify DATOMIC URL. ")) (def connection-url (first datomic-uri))))
+  (if (= conn nil)
+    (let [create-conn (create-connection connection-url)]
+      (def conn (:connection create-conn))
+      (def db (:db create-conn))
+      ))
+  )
+
+(defn get-conn []
+  (init)
+  conn)
+
+(defn get-db []
+  (init)
+  db)
 
 (defn get-attr-map [attr-map]
   (merge {:db/id (d/tempid ":db.part/db")
@@ -45,11 +67,11 @@
   (d/tempid ":db.part/user"))
 
 
-(defn d-transact [con attr-map-list]
-  (d/transact con attr-map-list)
+(defn d-transact [attr-map-list]
+  (d/transact (get-conn) attr-map-list)
   )
 
-(defn executeQuery [query db]
+(defn executeQuery [query]
   (d/q query
-    db
+    (get-db)
     ))

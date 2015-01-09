@@ -5,7 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [
                  [org.clojure/clojure "1.6.0"]
-                 [com.datomic/datomic-free "0.9.5078"]
+                 [com.datomic/datomic-free "0.9.5078" :exclusions [joda-time]]
                  [org.clojure/java.jdbc "0.3.6"]
                  [org.apache.derby/derbyclient "10.9.1.0"]
-                 ])
+                 ]
+  :main synth-db.synth-main)
