@@ -1,6 +1,6 @@
 {
   ;; datomic URI
-  :datomic-uri "datomic:free://192.168.33.161:4334/test150"
+  :datomic-uri "datomic:<type>://$host:4334/$dbname"
   ;; Derby Database parameter
   :db-info {
              :dbtype :derby
